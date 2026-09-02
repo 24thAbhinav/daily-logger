@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design Tokens ──────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --background:        42 33% 97%;
+  --background-subtle: 40 28% 94%;
+  --background-dim:    38 22% 90%;
+
+  /* Foregrounds */
+  --foreground:        24 18% 14%;
+  --foreground-muted:  24  9% 42%;
+  --foreground-subtle: 24  6% 58%;
+
+  /* Brand — terracotta */
+  --primary:           17 79% 47%;
+  --primary-hover:     17 79% 42%;
+  --primary-foreground:42 33% 97%;
+  --primary-subtle:    17 80% 95%;
+
+  /* Accent — sage */
+  --accent:           155 25% 36%;
+  --accent-foreground: 42 33% 97%;
+  --accent-subtle:    155 28% 93%;
+
+  /* Destructive */
+  --destructive:       0 72% 51%;
+
+  /* UI chrome */
+  --card:              0  0% 100%;
+  --card-foreground:   24 18% 14%;
+  --muted:             39 24% 91%;
+  --muted-foreground:  24  9% 48%;
+  --border:            36 20% 87%;
+  --ring:              17 79% 47%;
+
+  /* Shape */
+  --radius:    0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl:1.25rem;
+}
+
+/* ─── Base ───────────────────────────────────────────────────── */
+* {
+  border-color: hsl(var(--border));
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--foreground));
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: hsl(var(--border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--foreground-subtle)); }
+
+/* ─── Focus ring (global) ────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* ─── Keyframes ──────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes bounceSub {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.05); }
+}
+
+/* ─── Utility helpers ────────────────────────────────────────── */
+
+/* Skeleton loader shimmer */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--background-subtle)) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+/* Warm paper texture overlay (subtle) */
+.paper-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%23c4a97320'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Tag colour variants */
+.tag-learning  { background: hsl(var(--primary-subtle)); color: hsl(var(--primary)); }
+.tag-buildlog  { background: hsl(155 35% 92%);           color: hsl(155 40% 28%);   }
+.tag-thought   { background: hsl(250 60% 95%);           color: hsl(250 50% 40%);   }
+.tag-life      { background: hsl(40  80% 93%);           color: hsl(30  70% 35%);   }
+.tag-default   { background: hsl(var(--muted));          color: hsl(var(--foreground-muted)); }

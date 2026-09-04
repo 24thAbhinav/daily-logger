@@ -187,6 +187,7 @@ export default function Home() {
               <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">
                 Keep the small things. They compound into something bigger than
                 you expect.
+                So keep logging
               </p>
             </div>
 

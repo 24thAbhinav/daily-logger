@@ -5,7 +5,7 @@ description = "Daily Logger — FastAPI backend"
 authors = [
     { name = "AbhinavOC24", email = "chauhanabhinav822@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "asyncpg>=0.31.0",
     "fastapi>=0.115",

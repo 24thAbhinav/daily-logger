@@ -7,10 +7,19 @@ import { Pool } from "pg";
  * The backend (FastAPI) never touches this file; it verifies sessions by
  * calling GET /api/auth/get-session with the session token cookie.
  */
+const isRemoteDb =
+  process.env.DATABASE_URL &&
+  !process.env.DATABASE_URL.includes("localhost") &&
+  !process.env.DATABASE_URL.includes("127.0.0.1");
+
 const pool = new Pool({
   connectionString:
     process.env.DATABASE_URL ??
     "postgresql://daily_logger:daily_logger@localhost:5432/daily_logger",
+  ssl:
+    process.env.NODE_ENV === "production" || isRemoteDb
+      ? { rejectUnauthorized: false }
+      : undefined,
 });
 
 const googleConfigured =

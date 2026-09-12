@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { BookOpen, LogOut, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookOpen, LogOut, X, Loader2 } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import type { User } from "../lib/store";
 
@@ -49,6 +49,9 @@ type Props = {
 /* ── Component ────────────────────────────────────────────────── */
 
 export function AuthModal({ user, onClose, onSignOut }: Props) {
+  const [loading, setLoading] = useState<"google" | "twitter" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -59,10 +62,29 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
   }, [onClose]);
 
   async function signIn(provider: "google" | "twitter") {
-    await authClient.signIn.social({
-      provider,
-      callbackURL: window.location.origin,
-    });
+    setError(null);
+    setLoading(provider);
+    try {
+      const result = await authClient.signIn.social({
+        provider,
+        callbackURL: window.location.origin,
+      });
+      // signIn.social redirects the page — if we're still here, something went wrong
+      if (result?.error) {
+        setError(
+          result.error.message ??
+            "OAuth is not configured yet. Use demo mode for now."
+        );
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Could not connect to the auth provider. Try demo mode."
+      );
+    } finally {
+      setLoading(null);
+    }
   }
 
   return (
@@ -147,29 +169,63 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
                 private — only you can see it.
               </p>
 
+              {/* Error banner */}
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs text-destructive"
+                >
+                  {error}
+                </div>
+              )}
+
               <button
                 id="btn-google"
                 onClick={() => signIn("google")}
-                className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border bg-background text-sm font-medium hover:bg-muted transition-colors"
+                disabled={loading !== null}
+                className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border bg-background text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <GoogleIcon />
+                {loading === "google" ? (
+                  <Loader2 size={17} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <GoogleIcon />
+                )}
                 Continue with Google
               </button>
 
               <button
                 id="btn-x"
                 onClick={() => signIn("twitter")}
-                className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border bg-background text-sm font-medium hover:bg-muted transition-colors"
+                disabled={loading !== null}
+                className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border bg-background text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <XIcon />
+                {loading === "twitter" ? (
+                  <Loader2 size={17} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <XIcon />
+                )}
                 Continue with X
               </button>
 
               <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
                 <span className="h-px flex-1 bg-border" />
-                <span>or continue in demo mode</span>
+                <span>or</span>
                 <span className="h-px flex-1 bg-border" />
               </div>
+
+              {/* Demo mode — now a real button */}
+              <button
+                id="btn-demo-mode"
+                onClick={onClose}
+                className="flex h-10 w-full items-center justify-center rounded-xl border border-dashed
+                           text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                Continue in demo mode
+              </button>
+
+              <p className="text-center text-xs text-muted-foreground/60">
+                Demo mode uses a shared local account. No sign-in required.
+              </p>
             </div>
           )}
         </div>

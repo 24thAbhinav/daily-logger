@@ -71,10 +71,11 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
       });
       // signIn.social redirects the page — if we're still here, something went wrong
       if (result?.error) {
-        setError(
-          result.error.message ??
-            "OAuth is not configured yet. Use demo mode for now."
-        );
+        const msg =
+          result.error.message ||
+          (result.error as any).code ||
+          "Sign-in failed. Check that the OAuth callback URL is registered in Google Console.";
+        setError(msg);
       }
     } catch (e) {
       setError(

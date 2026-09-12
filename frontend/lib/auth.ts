@@ -13,18 +13,32 @@ const pool = new Pool({
     "postgresql://daily_logger:daily_logger@localhost:5432/daily_logger",
 });
 
+const googleConfigured =
+  !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
+const twitterConfigured =
+  !!process.env.X_CLIENT_ID && !!process.env.X_CLIENT_SECRET;
+
 export const auth = betterAuth({
   database: pool,
-  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  // BETTER_AUTH_URL is the canonical base URL (set in Vercel env vars).
+  // Better Auth uses this to construct OAuth callback URIs sent to providers.
+  baseURL:
+    process.env.BETTER_AUTH_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
   socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    },
-    twitter: {
-      clientId: process.env.X_CLIENT_ID ?? "",
-      clientSecret: process.env.X_CLIENT_SECRET ?? "",
-    },
+    ...(googleConfigured && {
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      },
+    }),
+    ...(twitterConfigured && {
+      twitter: {
+        clientId: process.env.X_CLIENT_ID!,
+        clientSecret: process.env.X_CLIENT_SECRET!,
+      },
+    }),
   },
 });

@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, LogOut, X, Loader2 } from "lucide-react";
+import { BookOpen, LogOut, X, Loader2, ShieldCheck, ArrowRight } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import type { User } from "../lib/store";
 
-/* ── Social brand SVGs ────────────────────────────────────────── */
-
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+    <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
       <path
         d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
         fill="#4285F4"
@@ -32,13 +30,11 @@ function GoogleIcon() {
 
 function XIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
     </svg>
   );
 }
-
-/* ── Props ────────────────────────────────────────────────────── */
 
 type Props = {
   user: User | null;
@@ -46,13 +42,10 @@ type Props = {
   onSignOut: () => void;
 };
 
-/* ── Component ────────────────────────────────────────────────── */
-
 export function AuthModal({ user, onClose, onSignOut }: Props) {
   const [loading, setLoading] = useState<"google" | "twitter" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -69,19 +62,18 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
         provider,
         callbackURL: window.location.origin,
       });
-      // signIn.social redirects the page — if we're still here, something went wrong
       if (result?.error) {
         const msg =
           result.error.message ||
           (result.error as any).code ||
-          "Sign-in failed. Check that the OAuth callback URL is registered in Google Console.";
+          "Sign-in failed. Please verify OAuth callback URL settings.";
         setError(msg);
       }
     } catch (e) {
       setError(
         e instanceof Error
           ? e.message
-          : "Could not connect to the auth provider. Try demo mode."
+          : "Could not connect to the auth provider. Try demo mode.",
       );
     } finally {
       setLoading(null);
@@ -90,7 +82,7 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -99,133 +91,127 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
-        className="w-full max-w-sm rounded-2xl border bg-card shadow-modal animate-scale-in"
+        className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-modal animate-scale-in"
       >
         {/* ── Header ── */}
-        <div className="flex items-start justify-between border-b px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-              <BookOpen size={18} aria-hidden="true" />
+        <div className="flex items-center justify-between border-b pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <BookOpen size={16} />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-                daily / logger
-              </p>
-              <h2
-                id="auth-title"
-                className="text-xl font-semibold tracking-[-0.03em]"
-              >
-                {user ? "Your account" : "Welcome back"}
+              <h2 id="auth-title" className="text-sm font-bold tracking-tight text-foreground">
+                {user ? "Your Workspace Account" : "Sign In to Daily Logger"}
               </h2>
+              <p className="text-[11px] text-foreground-subtle">Private & Local-First</p>
             </div>
           </div>
           <button
             aria-label="Close"
             onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-muted transition-colors"
           >
-            <X size={17} />
+            <X size={15} />
           </button>
         </div>
 
-        {/* ── Body ── */}
-        <div className="px-6 py-5">
+        {/* ── Content ── */}
+        <div className="pt-4">
           {user ? (
             /* Signed-in state */
             <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl border bg-muted/40 p-3">
+              <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
                 {user.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={user.image}
                     alt={user.name}
-                    className="h-10 w-10 rounded-full object-cover"
+                    className="h-10 w-10 rounded-full object-cover border border-border"
                   />
                 ) : (
-                  <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-sm font-bold text-primary">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{user.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {user.email}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                  <p className="truncate text-xs text-foreground-muted">{user.email}</p>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 rounded-lg border bg-emerald-500/10 p-2.5 text-xs text-emerald-500">
+                <ShieldCheck size={16} className="shrink-0" />
+                <span>Connected & synchronizing with your personal database.</span>
               </div>
 
               <button
                 onClick={onSignOut}
-                className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border bg-background text-xs font-semibold text-foreground-muted hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
               >
-                <LogOut size={16} aria-hidden="true" />
-                Sign out
+                <LogOut size={14} />
+                Sign Out
               </button>
             </div>
           ) : (
             /* Signed-out state */
             <div className="space-y-3">
-              <p className="text-sm leading-6 text-muted-foreground">
-                Sign in to sync your notes across devices. Your log stays
-                private — only you can see it.
+              <p className="text-xs leading-relaxed text-foreground-muted">
+                Sync your daily logs seamlessly across devices. Data is private to your account.
               </p>
 
-              {/* Error banner */}
               {error && (
-                <div
-                  role="alert"
-                  className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs text-destructive"
-                >
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive">
                   {error}
                 </div>
               )}
 
-              <button
-                id="btn-google"
-                onClick={() => signIn("google")}
-                disabled={loading !== null}
-                className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border bg-background text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading === "google" ? (
-                  <Loader2 size={17} className="animate-spin" aria-hidden="true" />
-                ) : (
-                  <GoogleIcon />
-                )}
-                Continue with Google
-              </button>
+              <div className="space-y-2 pt-1">
+                <button
+                  id="btn-google"
+                  onClick={() => signIn("google")}
+                  disabled={loading !== null}
+                  className="flex h-9 w-full items-center justify-center gap-2.5 rounded-lg border bg-background text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  {loading === "google" ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <GoogleIcon />
+                  )}
+                  Continue with Google
+                </button>
 
-              <button
-                id="btn-x"
-                onClick={() => signIn("twitter")}
-                disabled={loading !== null}
-                className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border bg-background text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading === "twitter" ? (
-                  <Loader2 size={17} className="animate-spin" aria-hidden="true" />
-                ) : (
-                  <XIcon />
-                )}
-                Continue with X
-              </button>
+                <button
+                  id="btn-x"
+                  onClick={() => signIn("twitter")}
+                  disabled={loading !== null}
+                  className="flex h-9 w-full items-center justify-center gap-2.5 rounded-lg border bg-background text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  {loading === "twitter" ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <XIcon />
+                  )}
+                  Continue with X
+                </button>
+              </div>
 
-              <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 py-1 text-xs text-foreground-subtle">
                 <span className="h-px flex-1 bg-border" />
-                <span>or</span>
+                <span className="text-[11px] uppercase tracking-wider">or</span>
                 <span className="h-px flex-1 bg-border" />
               </div>
 
-              {/* Demo mode — now a real button */}
               <button
                 id="btn-demo-mode"
                 onClick={onClose}
-                className="flex h-10 w-full items-center justify-center rounded-xl border border-dashed
-                           text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed bg-muted/30 text-xs font-medium text-foreground hover:bg-muted transition-colors"
               >
-                Continue in demo mode
+                <span>Continue in Demo Mode</span>
+                <ArrowRight size={13} className="text-foreground-muted" />
               </button>
 
-              <p className="text-center text-xs text-muted-foreground/60">
-                Demo mode uses a shared local account. No sign-in required.
+              <p className="text-center text-[11px] text-foreground-subtle">
+                Demo mode uses a shared local workspace. No login required.
               </p>
             </div>
           )}

@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef } from "react";
+import { ChevronLeft, ChevronRight, Calendar, RotateCcw } from "lucide-react";
 
 type Props = {
   selectedDate: string;
@@ -8,6 +9,7 @@ type Props = {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  onSelectDate?: (date: string) => void;
 };
 
 function formatDisplay(iso: string) {
@@ -19,20 +21,20 @@ function formatDisplay(iso: string) {
     return d.toISOString().slice(0, 10);
   })();
 
-  const label =
+  const dayRelative =
     iso === today
       ? "Today"
       : iso === yesterday
       ? "Yesterday"
-      : new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
+      : new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date);
 
-  const full = new Intl.DateTimeFormat("en-US", {
-    month: "long",
+  const formattedDate = new Intl.DateTimeFormat("en-US", {
+    month: "short",
     day: "numeric",
-    year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+    year: "numeric",
   }).format(date);
 
-  return { label, full };
+  return { dayRelative, formattedDate, isToday: iso === today };
 }
 
 export function DateNav({
@@ -41,57 +43,100 @@ export function DateNav({
   onPrev,
   onNext,
   onToday,
+  onSelectDate,
 }: Props) {
-  const today = new Date().toISOString().slice(0, 10);
-  const isToday = selectedDate === today;
-  const { label, full } = formatDisplay(selectedDate);
+  const { dayRelative, formattedDate, isToday } = formatDisplay(selectedDate);
+  const datePickerRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-col gap-3 border-y py-4 sm:flex-row sm:items-center sm:justify-between">
-      {/* Date selector */}
-      <div className="flex items-center gap-1">
-        <button
-          aria-label="Previous day"
-          onClick={onPrev}
-          className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <ChevronLeft size={18} aria-hidden="true" />
-        </button>
+    <div className="flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Date Navigation & Picker */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center rounded-lg border bg-muted/40 p-0.5">
+          <button
+            aria-label="Previous day (J or Left Arrow)"
+            title="Previous day (J)"
+            onClick={onPrev}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-card hover:text-foreground transition-colors"
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+          </button>
 
-        <div className="min-w-[180px] text-center">
-          <div className="flex items-baseline justify-center gap-2">
-            <span className="text-base font-bold tracking-[-0.02em]">
-              {label}
-            </span>
-            <span className="text-sm text-muted-foreground">{full}</span>
-          </div>
-          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-            {entryCount === 0
-              ? "no notes yet"
-              : `${entryCount} ${entryCount === 1 ? "note" : "notes"} logged`}
-          </p>
+          <button
+            aria-label="Jump to Today (T)"
+            title="Jump to Today (T)"
+            onClick={onToday}
+            className={`px-2.5 h-8 text-xs font-semibold rounded-md transition-colors ${
+              isToday
+                ? "bg-card text-foreground shadow-soft"
+                : "text-foreground-muted hover:bg-card hover:text-foreground"
+            }`}
+          >
+            Today
+          </button>
+
+          <button
+            aria-label="Next day (K or Right Arrow)"
+            title="Next day (K)"
+            onClick={onNext}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-card hover:text-foreground transition-colors"
+          >
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
         </div>
 
-        <button
-          aria-label="Next day"
-          onClick={onNext}
-          className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <ChevronRight size={18} aria-hidden="true" />
-        </button>
+        {/* Calendar Picker Trigger */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => datePickerRef.current?.showPicker?.()}
+            className="flex h-9 items-center gap-1.5 rounded-lg border bg-muted/40 px-2.5 text-xs font-medium text-foreground-muted hover:bg-card hover:text-foreground transition-colors"
+            title="Pick a date"
+          >
+            <Calendar size={14} className="text-foreground-muted" />
+            <span className="hidden xs:inline">Jump</span>
+          </button>
+          <input
+            ref={datePickerRef}
+            type="date"
+            value={selectedDate}
+            onChange={(e) => {
+              if (e.target.value && onSelectDate) {
+                onSelectDate(e.target.value);
+              }
+            }}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+        </div>
+
+        {/* Date Display */}
+        <div className="flex items-baseline gap-2 pl-2">
+          <span className="text-sm font-semibold tracking-tight text-foreground">
+            {dayRelative}
+          </span>
+          <span className="text-xs text-foreground-muted">{formattedDate}</span>
+        </div>
       </div>
 
-      {/* Right controls */}
-      <div className="flex items-center gap-2">
-        {!isToday && (
-          <button
-            onClick={onToday}
-            className="h-8 rounded-lg border bg-background px-3 text-xs font-semibold
-                       hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
-          >
-            Jump to today
-          </button>
-        )}
+      {/* Right side stats badge & quick actions */}
+      <div className="flex items-center justify-between sm:justify-end gap-2 border-t pt-2 sm:border-t-0 sm:pt-0">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center rounded-md border bg-muted/50 px-2.5 py-1 font-mono text-xs font-medium text-foreground-muted">
+            {entryCount} {entryCount === 1 ? "entry" : "entries"}
+          </span>
+
+          {!isToday && (
+            <button
+              onClick={onToday}
+              className="flex items-center gap-1 rounded-lg border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              <RotateCcw size={12} className="text-foreground-muted" />
+              <span>Back to Today</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

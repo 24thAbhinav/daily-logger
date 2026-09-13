@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Check, Sparkles, X } from "lucide-react";
+import { Check, Plus, X, Calendar, Sparkles } from "lucide-react";
 import type { Entry } from "../lib/store";
 import { createEntry } from "../lib/api";
 
@@ -14,25 +14,23 @@ const TAG_CLASSES: Record<string, string> = {
   Life: "tag-life",
 };
 
-const PROMPTS = [
-  "The idea that stayed with me today…",
-  "One thing I finally understand…",
-  "Something I built or shipped…",
-  "A thought I keep returning to…",
-  "What surprised me today…",
-  "A small win worth recording…",
+const TEMPLATES = [
+  { label: "Today I learned", prefix: "Today I learned: " },
+  { label: "Shipped today", prefix: "Shipped: \nImpact: " },
+  { label: "Architecture decision", prefix: "Decision: \nContext: \nTrade-offs: " },
+  { label: "Bug analysis", prefix: "Problem: \nRoot cause: \nFix: " },
 ];
 
-function randomPrompt() {
-  return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
-}
-
 function formatDate(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(`${iso}T12:00:00`));
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(new Date(`${iso}T12:00:00`));
+  } catch {
+    return iso;
+  }
 }
 
 type Props = {
@@ -48,25 +46,30 @@ export function Composer({ selectedDate, initialBody = "", onSave, onClose }: Pr
   const [tag, setTag] = useState("Learning");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const placeholder = useRef(randomPrompt());
   const titleRef = useRef<HTMLInputElement>(null);
 
   // Focus title on mount
   useEffect(() => {
-    setTimeout(() => titleRef.current?.focus(), 60);
+    const timer = setTimeout(() => titleRef.current?.focus(), 50);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Close on Escape
+  // Keyboard shortcuts: Escape to close, Cmd+Enter to submit
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        if (title.trim() && body.trim() && !saving) {
+          submitDirect();
+        }
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, title, body, saving]);
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  async function submitDirect() {
     if (!title.trim() || !body.trim()) return;
     setSaving(true);
     setError("");
@@ -79,101 +82,135 @@ export function Composer({ selectedDate, initialBody = "", onSave, onClose }: Pr
       });
       onSave(entry);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save this entry.");
+      setError(err instanceof Error ? err.message : "Failed to save entry.");
     } finally {
       setSaving(false);
     }
   }
 
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    await submitDirect();
+  }
+
+  function applyTemplate(prefix: string) {
+    setBody((prev) => (prev ? `${prev}\n\n${prefix}` : prefix));
+  }
+
+  const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
+
   return (
-    /* Backdrop */
     <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-foreground/20 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Dialog */}
       <form
         onSubmit={submit}
         role="dialog"
         aria-modal="true"
         aria-labelledby="composer-title"
-        className="w-full max-w-lg rounded-2xl border bg-card shadow-modal animate-slide-up"
+        className="w-full max-w-xl rounded-xl border bg-card shadow-modal animate-scale-in"
       >
         {/* ── Header ── */}
-        <div className="flex items-start justify-between border-b px-6 py-5">
-          <div>
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-              <Sparkles size={12} aria-hidden="true" />
+        <div className="flex items-center justify-between border-b px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 font-mono text-xs font-medium text-foreground-muted">
+              <Calendar size={12} />
               {formatDate(selectedDate)}
-            </p>
-            <h2
-              id="composer-title"
-              className="mt-1.5 text-2xl font-semibold tracking-[-0.04em]"
-            >
-              Add to the record
+            </span>
+            <span className="text-xs text-foreground-subtle">/</span>
+            <h2 id="composer-title" className="text-sm font-semibold tracking-tight text-foreground">
+              New Daily Note
             </h2>
           </div>
-          <button
-            type="button"
-            aria-label="Close note composer"
-            onClick={onClose}
-            className="mt-0.5 grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <X size={17} />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <kbd className="hidden sm:inline-flex">Esc</kbd>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
 
         {/* ── Body ── */}
-        <div className="space-y-4 px-6 py-5">
+        <div className="space-y-3.5 p-5">
+          {/* Quick template triggers */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="flex items-center gap-1 text-[11px] font-medium text-foreground-subtle mr-1">
+              <Sparkles size={11} className="text-primary" />
+              Templates:
+            </span>
+            {TEMPLATES.map((tpl) => (
+              <button
+                key={tpl.label}
+                type="button"
+                onClick={() => applyTemplate(tpl.prefix)}
+                className="rounded-md border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground-muted hover:bg-card hover:text-foreground transition-colors"
+              >
+                + {tpl.label}
+              </button>
+            ))}
+          </div>
+
           {/* Title */}
           <div>
-            <label htmlFor="c-title" className="mb-1.5 block text-sm font-medium">
-              Title <span className="text-primary">*</span>
+            <label htmlFor="composer-input-title" className="sr-only">
+              Title
             </label>
             <input
-              id="c-title"
+              id="composer-input-title"
               ref={titleRef}
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={placeholder.current}
-              className="h-11 w-full rounded-xl border bg-background px-3.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow"
+              placeholder="What did you learn or ship today?..."
+              className="h-10 w-full rounded-lg border bg-background px-3 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow placeholder:text-foreground-subtle placeholder:font-normal"
             />
           </div>
 
           {/* Body */}
           <div>
-            <label htmlFor="c-body" className="mb-1.5 block text-sm font-medium">
-              Note <span className="text-primary">*</span>
+            <label htmlFor="composer-input-body" className="sr-only">
+              Note Content
             </label>
             <textarea
-              id="c-body"
+              id="composer-input-body"
               required
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="A few sentences is enough…"
-              rows={5}
-              className="w-full resize-none rounded-xl border bg-background px-3.5 py-3 text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow"
+              placeholder="Write your reflection, notes, architecture thoughts, or discoveries..."
+              rows={6}
+              className="w-full resize-none rounded-lg border bg-background px-3 py-2.5 text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow placeholder:text-foreground-subtle"
             />
-            <p className="mt-1 text-right font-mono text-[11px] text-muted-foreground">
-              {body.length} / 10 000
-            </p>
+            <div className="mt-1 flex items-center justify-between text-[11px] text-foreground-subtle">
+              <span>Supports plain text & markdown notes</span>
+              <span className="font-mono">
+                {wordCount} {wordCount === 1 ? "word" : "words"} · {body.length} chars
+              </span>
+            </div>
           </div>
 
-          {/* Tag */}
+          {/* Tag Selector */}
           <div>
-            <p className="mb-2 text-sm font-medium">Tag</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-medium text-foreground-muted mr-1.5">
+                Category:
+              </span>
               {TAGS.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setTag(t)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
                     TAG_CLASSES[t] ?? "tag-default"
-                  } ${tag === t ? "ring-2 ring-primary ring-offset-1" : "opacity-55 hover:opacity-100"}`}
+                  } ${tag === t ? "ring-2 ring-primary ring-offset-1" : "opacity-50 hover:opacity-100"}`}
                 >
                   {t}
                 </button>
@@ -182,36 +219,41 @@ export function Composer({ selectedDate, initialBody = "", onSave, onClose }: Pr
           </div>
 
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive">
               {error}
-            </p>
+            </div>
           )}
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex justify-end gap-2 border-t px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 rounded-xl px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving || !title.trim() || !body.trim()}
-            aria-busy={saving}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-55 transition-all"
-          >
-            {saving ? (
-              "Saving…"
-            ) : (
-              <>
-                <Check size={15} />
-                Save note
-              </>
-            )}
-          </button>
+        <div className="flex items-center justify-between border-t px-5 py-3 bg-muted/20">
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-foreground-subtle">
+            <kbd>⌘</kbd> + <kbd>Enter</kbd> to save
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-8 rounded-lg px-3 text-xs font-medium text-foreground-muted hover:bg-muted transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !title.trim() || !body.trim()}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            >
+              {saving ? (
+                "Saving…"
+              ) : (
+                <>
+                  <Check size={13} />
+                  Save Note
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>

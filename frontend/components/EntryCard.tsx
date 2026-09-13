@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil, Trash2, X } from "lucide-react";
+import { Check, Copy, Pencil, Trash2, X } from "lucide-react";
 import type { Entry } from "../lib/store";
 import { updateEntry as apiUpdate } from "../lib/api";
-
-/* ─── Helpers ────────────────────────────────────────────────── */
 
 const TAG_CLASSES: Record<string, string> = {
   Learning: "tag-learning",
@@ -19,13 +17,15 @@ function tagClass(tag: string): string {
 }
 
 function timeLabel(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(iso));
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return "";
+  }
 }
-
-/* ─── Props ──────────────────────────────────────────────────── */
 
 type Props = {
   entry: Entry;
@@ -34,13 +34,12 @@ type Props = {
   style?: React.CSSProperties;
 };
 
-/* ─── Component ──────────────────────────────────────────────── */
-
 export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(entry.title);
@@ -71,91 +70,109 @@ export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
     setEditing(false);
   }
 
+  function copyContent() {
+    const text = `${entry.title}\n\n${entry.body}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   const tags = ["Learning", "Build log", "Thought", "Life"];
 
   return (
     <article
       style={style}
-      className="group relative rounded-xl border bg-card shadow-soft transition-all duration-200
-                 hover:-translate-y-0.5 hover:shadow-card animate-fade-in"
+      className="group relative rounded-xl border bg-card p-5 transition-all duration-150 hover:border-foreground/30 shadow-soft"
     >
       {/* ── View mode ── */}
       {!editing && (
-        <div className="p-5">
+        <div>
           {/* Header row */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${tagClass(entry.tag)}`}
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${tagClass(
+                    entry.tag,
+                  )}`}
                 >
                   {entry.tag}
                 </span>
-                <span className="font-mono text-[11px] text-muted-foreground">
+
+                <span className="font-mono text-xs text-foreground-subtle">
                   {timeLabel(entry.created_at)}
                   {entry.updated_at && entry.updated_at !== entry.created_at && (
-                    <span className="ml-1 text-[10px] opacity-70">(edited)</span>
+                    <span className="ml-1 text-[10px] opacity-75">(edited)</span>
                   )}
                 </span>
               </div>
 
-              <button
-                onClick={() => setExpanded((p) => !p)}
-                className="text-left"
-              >
-                <h2 className="text-base font-semibold leading-snug tracking-[-0.02em] transition-colors group-hover:text-primary">
-                  {entry.title}
-                </h2>
-              </button>
+              <h2 className="text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary">
+                {entry.title}
+              </h2>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {/* Quick actions toolbar */}
+            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-75">
               {confirming ? (
-                <>
+                <div className="flex items-center gap-1 rounded-lg border bg-background p-0.5 shadow-sm">
                   <button
                     onClick={() => onDelete(entry.id)}
-                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                    className="rounded-md bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive hover:bg-destructive/20 transition-colors"
                   >
                     Delete
                   </button>
                   <button
                     aria-label="Cancel delete"
                     onClick={() => setConfirming(false)}
-                    className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-muted transition-colors"
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </button>
-                </>
+                </div>
               ) : (
-                <>
+                <div className="flex items-center gap-0.5 rounded-lg border bg-background/80 p-0.5">
+                  <button
+                    aria-label="Copy note text"
+                    title="Copy note"
+                    onClick={copyContent}
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    {copied ? (
+                      <Check size={13} className="text-emerald-500" />
+                    ) : (
+                      <Copy size={13} />
+                    )}
+                  </button>
                   <button
                     aria-label="Edit entry"
+                    title="Edit entry"
                     onClick={() => setEditing(true)}
-                    className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-muted hover:text-foreground transition-colors"
                   >
-                    <Pencil size={14} />
+                    <Pencil size={13} />
                   </button>
                   <button
                     aria-label={`Delete ${entry.title}`}
+                    title="Delete entry"
                     onClick={() => setConfirming(true)}
-                    className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-destructive/10 hover:text-destructive transition-colors"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Body — collapsed / expanded */}
+          {/* Body */}
           <div
-            className={`mt-3 overflow-hidden transition-all duration-300 ${
-              expanded ? "max-h-[600px]" : "max-h-[4.5rem]"
+            className={`mt-3 overflow-hidden transition-all duration-200 ${
+              expanded ? "max-h-[800px]" : "max-h-24"
             }`}
           >
             <p
-              className={`whitespace-pre-wrap text-sm leading-7 text-muted-foreground ${
+              className={`whitespace-pre-wrap text-sm leading-relaxed text-foreground-muted ${
                 !expanded ? "line-clamp-3" : ""
               }`}
             >
@@ -163,11 +180,11 @@ export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
             </p>
           </div>
 
-          {/* Expand toggle (only if body is long) */}
-          {entry.body.length > 220 && (
+          {/* Expand toggle */}
+          {entry.body.length > 200 && (
             <button
               onClick={() => setExpanded((p) => !p)}
-              className="mt-2 text-xs font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary transition-colors"
+              className="mt-2 text-xs font-semibold text-primary hover:underline transition-colors"
             >
               {expanded ? "Show less" : "Read more"}
             </button>
@@ -177,14 +194,14 @@ export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
 
       {/* ── Edit mode ── */}
       {editing && (
-        <div className="p-5 animate-scale-in">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-              Editing
-            </p>
+        <div className="animate-scale-in">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Editing entry
+            </span>
             <button
               onClick={cancelEdit}
-              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-muted transition-colors"
             >
               <X size={14} />
             </button>
@@ -195,14 +212,14 @@ export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
               autoFocus
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="h-10 w-full rounded-lg border bg-background px-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow"
+              className="h-10 w-full rounded-lg border bg-background px-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
               placeholder="Title"
             />
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
               rows={4}
-              className="w-full resize-none rounded-lg border bg-background px-3 py-2.5 text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow"
+              className="w-full resize-none rounded-lg border bg-background px-3 py-2.5 text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
               placeholder="Your note..."
             />
             <div className="flex flex-wrap gap-2">
@@ -211,7 +228,7 @@ export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
                   key={t}
                   type="button"
                   onClick={() => setEditTag(t)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
                     editTag === t
                       ? "ring-2 ring-primary ring-offset-1 " + tagClass(t)
                       : tagClass(t) + " opacity-60 hover:opacity-100"
@@ -223,26 +240,19 @@ export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
             </div>
           </div>
 
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="mt-4 flex justify-end gap-2 border-t pt-3">
             <button
               onClick={cancelEdit}
-              className="h-9 rounded-lg px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+              className="h-8 rounded-lg px-3 text-xs font-medium text-foreground-muted hover:bg-muted transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={saveEdit}
-              disabled={saving}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:brightness-105 disabled:opacity-60 transition-all"
+              disabled={saving || !editTitle.trim() || !editBody.trim()}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors"
             >
-              {saving ? (
-                "Saving…"
-              ) : (
-                <>
-                  <Check size={14} />
-                  Save
-                </>
-              )}
+              {saving ? "Saving…" : "Save Changes"}
             </button>
           </div>
         </div>

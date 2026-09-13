@@ -6,12 +6,13 @@ const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "daily / logger",
+  title: "Daily Logger — High-Velocity Daily Notes for Builders",
   description:
-    "A quiet place to keep track of what you learn, build, and think.",
+    "The private, keyboard-driven daily log for developers and founders. Capture insights, architecture decisions, and wins without friction.",
   openGraph: {
-    title: "daily / logger",
-    description: "A quiet place to keep track of what you learn, build, and think.",
+    title: "Daily Logger — High-Velocity Daily Notes for Builders",
+    description:
+      "The private, keyboard-driven daily log for developers and founders. Capture insights, architecture decisions, and wins without friction.",
     type: "website",
   },
 };
@@ -20,8 +21,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${mono.variable}`}>
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en" className={`dark ${geist.variable} ${mono.variable}`}>
+      <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">
+        {children}
+      </body>
     </html>
   );
 }

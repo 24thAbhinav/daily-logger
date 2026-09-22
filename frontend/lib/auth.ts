@@ -26,19 +26,9 @@ const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const googleConfigured = !!googleClientId && !!googleClientSecret;
 
-// Accept both X_* (X's current branding) and TWITTER_* (legacy) env var names.
-const xClientId = process.env.X_CLIENT_ID || process.env.TWITTER_CLIENT_ID;
-const xClientSecret = process.env.X_CLIENT_SECRET || process.env.TWITTER_CLIENT_SECRET;
-const twitterConfigured = !!xClientId && !!xClientSecret;
-
 if (!googleConfigured) {
   console.warn(
     "[auth] Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Google sign-in.",
-  );
-}
-if (!twitterConfigured) {
-  console.warn(
-    "[auth] X/Twitter OAuth is not configured. Set X_CLIENT_ID and X_CLIENT_SECRET (or TWITTER_CLIENT_ID / TWITTER_CLIENT_SECRET) to enable X sign-in.",
   );
 }
 
@@ -56,12 +46,6 @@ export const auth = betterAuth({
       google: {
         clientId: googleClientId!,
         clientSecret: googleClientSecret!,
-      },
-    }),
-    ...(twitterConfigured && {
-      twitter: {
-        clientId: xClientId!,
-        clientSecret: xClientSecret!,
       },
     }),
   },

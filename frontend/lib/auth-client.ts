@@ -3,7 +3,7 @@ import { createAuthClient } from "better-auth/react";
 /**
  * Client-side Better Auth instance.
  * `useSession()` gives us the current user + raw session token.
- * `signIn.social()` initiates Google / X OAuth.
+ * `signIn.social()` initiates Google OAuth.
  * `signOut()` clears the session.
  *
  * baseURL uses window.location.origin at runtime so auth requests always

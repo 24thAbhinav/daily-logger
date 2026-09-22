@@ -157,7 +157,7 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
             onClick={onSignIn}
             className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-lg border bg-card px-5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
           >
-            Sign In with Google / X
+            Sign In with Google
           </button>
         </div>
 

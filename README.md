@@ -22,6 +22,6 @@ A local-first daily learning log. Add notes to a specific date, search across th
    npm run dev
    ```
 
-Open http://localhost:3000. The app works in local demo mode immediately. To enable OAuth, add Google and X credentials in `frontend/.env.local`, register callbacks at `/api/auth/callback/google` and `/api/auth/callback/twitter`, then run Better Auth's schema migration (`npx @better-auth/cli migrate`).
+Open http://localhost:3000. The app works in local demo mode immediately. To enable OAuth, add Google credentials in `frontend/.env.local`, register the callback at `/api/auth/callback/google`, then run Better Auth's schema migration (`npx @better-auth/cli migrate`).
 
 The frontend uses Better Auth for social login, Zustand for client state, and calls the FastAPI API at `NEXT_PUBLIC_API_URL`. The API uses Pydantic schemas, SQLAlchemy async models, and PostgreSQL.

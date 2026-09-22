@@ -28,14 +28,6 @@ function GoogleIcon() {
   );
 }
 
-function XIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
-    </svg>
-  );
-}
-
 type Props = {
   user: User | null;
   onClose: () => void;
@@ -43,7 +35,7 @@ type Props = {
 };
 
 export function AuthModal({ user, onClose, onSignOut }: Props) {
-  const [loading, setLoading] = useState<"google" | "twitter" | null>(null);
+  const [loading, setLoading] = useState<"google" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,22 +46,19 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  async function signIn(provider: "google" | "twitter") {
+  async function signIn() {
     setError(null);
-    setLoading(provider);
+    setLoading("google");
     try {
       const result = await authClient.signIn.social({
-        provider,
+        provider: "google",
         callbackURL: window.location.origin,
       });
       if (result?.error) {
         const code = (result.error as any).code as string | undefined;
-        const providerLabel = provider === "google" ? "Google" : "X";
         const msg =
           code === "PROVIDER_NOT_FOUND"
-            ? `${providerLabel} sign-in isn't configured. Set ${
-                provider === "google" ? "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET" : "X_CLIENT_ID / X_CLIENT_SECRET"
-              } in your environment and redeploy.`
+            ? "Google sign-in isn't configured. Set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in your environment and redeploy."
             : result.error.message ||
               code ||
               "Sign-in failed. Please verify OAuth callback URL settings.";
@@ -171,7 +160,7 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
               <div className="space-y-2 pt-1">
                 <button
                   id="btn-google"
-                  onClick={() => signIn("google")}
+                  onClick={() => signIn()}
                   disabled={loading !== null}
                   className="flex h-9 w-full items-center justify-center gap-2.5 rounded-lg border bg-background text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                 >
@@ -181,20 +170,6 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
                     <GoogleIcon />
                   )}
                   Continue with Google
-                </button>
-
-                <button
-                  id="btn-x"
-                  onClick={() => signIn("twitter")}
-                  disabled={loading !== null}
-                  className="flex h-9 w-full items-center justify-center gap-2.5 rounded-lg border bg-background text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                >
-                  {loading === "twitter" ? (
-                    <Loader2 size={15} className="animate-spin" />
-                  ) : (
-                    <XIcon />
-                  )}
-                  Continue with X
                 </button>
               </div>
 

@@ -445,6 +445,7 @@ export default function Home() {
       setShowApp(true);
     } else {
       setUser(null);
+      setShowApp(false);
     }
   }, [session, setUser]);
 
@@ -460,8 +461,8 @@ export default function Home() {
   }, [setEntries, setLoading, setError]);
 
   useEffect(() => {
-    if (showApp) fetchEntries();
-  }, [showApp, fetchEntries]);
+    if (showApp && session?.user) fetchEntries();
+  }, [showApp, session?.user, fetchEntries]);
 
   /* ── Global Keyboard Shortcuts ── */
   useEffect(() => {
@@ -546,12 +547,20 @@ export default function Home() {
     setAuthOpen(false);
   }
 
+  function handleEnterApp() {
+    if (session?.user) {
+      setShowApp(true);
+    } else {
+      setAuthOpen(true);
+    }
+  }
+
   /* ── Landing Page View ── */
   if (!showApp) {
     return (
       <>
         <LandingPage
-          onEnterApp={() => setShowApp(true)}
+          onEnterApp={handleEnterApp}
           onSignIn={() => setAuthOpen(true)}
         />
         {authOpen && (

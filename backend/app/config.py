@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     # Better Auth runs inside Next.js; the backend calls this URL to verify sessions.
     better_auth_url: str = "http://localhost:3000"
+    # Must match the BETTER_AUTH_SECRET used by the Next.js app.
+    better_auth_secret: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

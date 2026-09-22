@@ -7,7 +7,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
  * Core fetch wrapper.
  * - Reads the current Better Auth session token via getSession() and forwards
  *   it as `Authorization: Bearer <token>` so the FastAPI backend can verify it.
- * - Falls back gracefully (no token sent) in local demo mode.
+ * - Requires an authenticated Better Auth session.
  */
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   // Better Auth exposes the raw session token as session.token in getSession().
@@ -21,6 +21,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  } else {
+    throw new Error("Please sign in to access your entries.");
   }
 
   const response = await fetch(`${BASE}${path}`, { ...init, headers });

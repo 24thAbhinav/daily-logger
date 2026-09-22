@@ -1,5 +1,9 @@
 from contextlib import asynccontextmanager
 from datetime import date
+import base64
+import hashlib
+import hmac
+from urllib.parse import quote, urlparse
 
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
@@ -47,11 +51,31 @@ async def _resolve_better_auth_user(token: str) -> dict | None:
     """
     if _http_client is None:
         return None
+    if not settings.better_auth_secret:
+        return None
+
+    signature = base64.b64encode(
+        hmac.new(
+            settings.better_auth_secret.encode("utf-8"),
+            token.encode("utf-8"),
+            hashlib.sha256,
+        ).digest()
+    ).decode("ascii")
+    signed_token = quote(
+        f"{token}.{signature}",
+        safe="-_.!~*'()",
+    )
+    cookie_name = (
+        "__Secure-better-auth.session_token"
+        if urlparse(settings.better_auth_url).scheme == "https"
+        else "better-auth.session_token"
+    )
+
     try:
         resp = await _http_client.get(
-            f"{settings.better_auth_url}/api/auth/get-session",
-            # Better Auth reads the session token from this cookie name.
-            cookies={"better-auth.session_token": token},
+            f"{settings.better_auth_url.rstrip('/')}/api/auth/get-session",
+            # Better Auth expects the HMAC-signed, URL-encoded cookie value.
+            cookies={cookie_name: signed_token},
         )
         if resp.status_code == 200:
             data = resp.json()

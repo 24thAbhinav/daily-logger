@@ -25,10 +25,13 @@ services:
           name: daily-logger-db
           property: connectionString
 
-      # Fill these in the Render dashboard once your Vercel URL is known
+      # Frontend URL used for CORS and Better Auth session verification
       - key: FRONTEND_URL
-        sync: false
+        value: https://frontend-alpha-ashen-54.vercel.app
       - key: BETTER_AUTH_URL
+        value: https://frontend-alpha-ashen-54.vercel.app
+      # Set this to the exact same value as the Vercel BETTER_AUTH_SECRET.
+      - key: BETTER_AUTH_SECRET
         sync: false
 
     healthCheckPath: /health

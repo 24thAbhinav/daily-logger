@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogOut, X, Loader2, ShieldCheck, ArrowRight } from "lucide-react";
+import { LogOut, X, Loader2, ShieldCheck } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import type { User } from "../lib/store";
 
@@ -68,7 +68,7 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
       setError(
         e instanceof Error
           ? e.message
-          : "Could not connect to the auth provider. Try demo mode.",
+          : "Could not connect to the auth provider. Please try again.",
       );
     } finally {
       setLoading(null);
@@ -173,23 +173,8 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 py-1 text-xs text-foreground-subtle">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-[11px] uppercase tracking-wider">or</span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-
-              <button
-                id="btn-demo-mode"
-                onClick={onClose}
-                className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed bg-muted/30 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-              >
-                <span>Continue in Demo Mode</span>
-                <ArrowRight size={13} className="text-foreground-muted" />
-              </button>
-
               <p className="text-center text-[11px] text-foreground-subtle">
-                Demo mode uses a shared local workspace. No login required.
+                Sign in to access your private workspace.
               </p>
             </div>
           )}

@@ -32,15 +32,20 @@ if (!googleConfigured) {
   );
 }
 
+const appURL =
+  process.env.BETTER_AUTH_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "http://localhost:3000";
+
 export const auth = betterAuth({
   database: pool,
   // BETTER_AUTH_URL is the canonical base URL (set in Vercel env vars).
   // Better Auth uses this to construct OAuth callback URIs sent to providers.
-  baseURL:
-    process.env.BETTER_AUTH_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "http://localhost:3000",
+  baseURL: appURL,
   secret: process.env.BETTER_AUTH_SECRET,
+  // Allow callbackURLs from the same origin so signIn.social({ callbackURL })
+  // doesn't throw INVALID_CALLBACK_URL in production.
+  trustedOrigins: [appURL],
   socialProviders: {
     ...(googleConfigured && {
       google: {

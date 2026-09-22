@@ -250,7 +250,7 @@ export function EntryCard({ entry, onDelete, onUpdate, style }: Props) {
             <button
               onClick={saveEdit}
               disabled={saving || !editTitle.trim() || !editBody.trim()}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-foreground px-3.5 text-xs font-semibold text-background hover:opacity-90 disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving…" : "Save Changes"}
             </button>

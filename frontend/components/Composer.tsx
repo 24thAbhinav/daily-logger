@@ -242,7 +242,7 @@ export function Composer({ selectedDate, initialBody = "", onSave, onClose }: Pr
             <button
               type="submit"
               disabled={saving || !title.trim() || !body.trim()}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-foreground px-3.5 text-xs font-semibold text-background hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {saving ? (
                 "Saving…"

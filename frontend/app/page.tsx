@@ -116,7 +116,7 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
             <button
               id="landing-start-writing"
               onClick={onEnterApp}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary-hover transition-colors"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-foreground px-4 text-xs font-semibold text-background hover:opacity-90 transition-colors"
             >
               <span>Launch App</span>
               <ArrowRight size={13} />
@@ -148,7 +148,7 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <button
             onClick={onEnterApp}
-            className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary-hover transition-colors shadow-sm"
+            className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-foreground px-6 text-sm font-semibold text-background hover:opacity-90 transition-colors shadow-sm"
           >
             Start Logging — It&apos;s Free
             <ArrowRight size={15} />
@@ -188,7 +188,7 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
             </div>
             <button
               onClick={onEnterApp}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary-hover transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-2.5 py-1 text-xs font-semibold text-background hover:opacity-90 transition-colors"
             >
               Open Live <ArrowRight size={12} />
             </button>
@@ -317,7 +317,7 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
               onClick={onEnterApp}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary-hover transition-colors shadow-sm"
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground px-6 text-sm font-semibold text-background hover:opacity-90 transition-colors shadow-sm"
             >
               Open Daily Logger <ArrowRight size={14} />
             </button>
@@ -612,11 +612,11 @@ export default function Home() {
             <button
               id="btn-add-note-header"
               onClick={() => openComposer()}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary-hover transition-colors shadow-sm"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-foreground px-3 text-xs font-semibold text-background hover:opacity-90 transition-colors shadow-sm"
             >
               <Plus size={14} />
               <span>New Entry</span>
-              <kbd className="ml-1 hidden md:inline-flex text-[10px] opacity-80 border-primary-foreground/30 bg-primary-foreground/20 text-primary-foreground">
+              <kbd className="ml-1 hidden md:inline-flex text-[10px] opacity-80 border-background/30 bg-background/20 text-background">
                 N
               </kbd>
             </button>

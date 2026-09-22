@@ -22,10 +22,25 @@ const pool = new Pool({
       : undefined,
 });
 
-const googleConfigured =
-  !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
-const twitterConfigured =
-  !!process.env.X_CLIENT_ID && !!process.env.X_CLIENT_SECRET;
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const googleConfigured = !!googleClientId && !!googleClientSecret;
+
+// Accept both X_* (X's current branding) and TWITTER_* (legacy) env var names.
+const xClientId = process.env.X_CLIENT_ID || process.env.TWITTER_CLIENT_ID;
+const xClientSecret = process.env.X_CLIENT_SECRET || process.env.TWITTER_CLIENT_SECRET;
+const twitterConfigured = !!xClientId && !!xClientSecret;
+
+if (!googleConfigured) {
+  console.warn(
+    "[auth] Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Google sign-in.",
+  );
+}
+if (!twitterConfigured) {
+  console.warn(
+    "[auth] X/Twitter OAuth is not configured. Set X_CLIENT_ID and X_CLIENT_SECRET (or TWITTER_CLIENT_ID / TWITTER_CLIENT_SECRET) to enable X sign-in.",
+  );
+}
 
 export const auth = betterAuth({
   database: pool,
@@ -39,14 +54,14 @@ export const auth = betterAuth({
   socialProviders: {
     ...(googleConfigured && {
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: googleClientId!,
+        clientSecret: googleClientSecret!,
       },
     }),
     ...(twitterConfigured && {
       twitter: {
-        clientId: process.env.X_CLIENT_ID!,
-        clientSecret: process.env.X_CLIENT_SECRET!,
+        clientId: xClientId!,
+        clientSecret: xClientSecret!,
       },
     }),
   },

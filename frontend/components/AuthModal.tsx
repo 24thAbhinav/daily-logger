@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, LogOut, X, Loader2, ShieldCheck, ArrowRight } from "lucide-react";
+import { LogOut, X, Loader2, ShieldCheck, ArrowRight } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import type { User } from "../lib/store";
 
@@ -63,10 +63,16 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
         callbackURL: window.location.origin,
       });
       if (result?.error) {
+        const code = (result.error as any).code as string | undefined;
+        const providerLabel = provider === "google" ? "Google" : "X";
         const msg =
-          result.error.message ||
-          (result.error as any).code ||
-          "Sign-in failed. Please verify OAuth callback URL settings.";
+          code === "PROVIDER_NOT_FOUND"
+            ? `${providerLabel} sign-in isn't configured. Set ${
+                provider === "google" ? "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET" : "X_CLIENT_ID / X_CLIENT_SECRET"
+              } in your environment and redeploy.`
+            : result.error.message ||
+              code ||
+              "Sign-in failed. Please verify OAuth callback URL settings.";
         setError(msg);
       }
     } catch (e) {
@@ -96,9 +102,6 @@ export function AuthModal({ user, onClose, onSignOut }: Props) {
         {/* ── Header ── */}
         <div className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <BookOpen size={16} />
-            </div>
             <div>
               <h2 id="auth-title" className="text-sm font-bold tracking-tight text-foreground">
                 {user ? "Your Workspace Account" : "Sign In to Daily Logger"}

@@ -13,11 +13,11 @@
   --foreground-muted:  240 4% 44%;
   --foreground-subtle: 240 5% 65%;
 
-  /* Solid Brand Blue Accent */
-  --primary:           221 83% 53%;
-  --primary-hover:     221 83% 46%;
+  /* Solid Brand Teal Green Accent */
+  --primary:           170 76% 35%;
+  --primary-hover:     170 76% 29%;
   --primary-foreground:0 0% 100%;
-  --primary-subtle:    221 90% 96%;
+  --primary-subtle:    170 76% 95%;
 
   --accent:            240 5% 94%;
   --accent-foreground: 240 10% 4%;
@@ -31,7 +31,7 @@
   --muted:             240 5% 95%;
   --muted-foreground:  240 4% 45%;
   --border:            240 6% 90%;
-  --ring:              221 83% 53%;
+  --ring:              170 76% 35%;
 
   /* Radius */
   --radius:    0.5rem;
@@ -50,10 +50,10 @@
   --foreground-muted:  240 5% 65%;
   --foreground-subtle: 240 4% 45%;
 
-  --primary:           217 91% 60%;
-  --primary-hover:     217 91% 54%;
+  --primary:           170 70% 52%;
+  --primary-hover:     170 70% 58%;
   --primary-foreground:0 0% 100%;
-  --primary-subtle:    217 70% 14%;
+  --primary-subtle:    170 60% 16%;
 
   --accent:            240 6% 12%;
   --accent-foreground: 0 0% 98%;
@@ -66,7 +66,7 @@
   --muted:             240 6% 12%;
   --muted-foreground:  240 5% 65%;
   --border:            240 5% 17%;
-  --ring:              217 91% 60%;
+  --ring:              170 70% 52%;
 }
 
 /* ─── Base ───────────────────────────────────────────────────── */

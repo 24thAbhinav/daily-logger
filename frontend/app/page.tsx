@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
-  BookOpen,
   CalendarDays,
   Plus,
   Search,
@@ -98,9 +97,6 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <BookOpen size={16} />
-            </div>
             <span className="text-sm font-bold tracking-tight text-foreground">
               daily <span className="text-foreground-subtle">/</span> logger
             </span>
@@ -578,9 +574,6 @@ export default function Home() {
               className="flex items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title="Return to home"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <BookOpen size={16} />
-              </div>
               <span className="text-sm font-bold tracking-tight text-foreground hidden sm:inline">
                 daily <span className="text-foreground-subtle">/</span> logger
               </span>

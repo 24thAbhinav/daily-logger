@@ -2,10 +2,12 @@
 
 import { Clock3, Flame, TrendingUp, Sparkles, Command } from "lucide-react";
 import type { Entry } from "../lib/store";
+import { Calendar } from "./Calendar";
 
 type Props = {
   entries: Entry[];
   selectedDate: string;
+  onSelectDate: (date: string) => void;
   onPromptClick: (body: string) => void;
 };
 
@@ -72,7 +74,7 @@ function getPast7Days(entries: Entry[]) {
   return days;
 }
 
-export function Sidebar({ entries, selectedDate, onPromptClick }: Props) {
+export function Sidebar({ entries, selectedDate, onSelectDate, onPromptClick }: Props) {
   const streak = calcStreak(entries);
   const todayCount = entries.filter((e) => e.entry_date === selectedDate).length;
   const tags = tagFreq(entries);
@@ -93,6 +95,15 @@ export function Sidebar({ entries, selectedDate, onPromptClick }: Props) {
               {streak}d streak
             </span>
           )}
+        </div>
+
+        {/* Custom Calendar */}
+        <div className="mb-3 rounded-lg border bg-background/70 p-2">
+          <Calendar
+            selectedDate={selectedDate}
+            entries={entries}
+            onSelectDate={onSelectDate}
+          />
         </div>
 
         {/* 3 Stats in a clean grid */}

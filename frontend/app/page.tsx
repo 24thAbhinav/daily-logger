@@ -654,10 +654,6 @@ export default function Home() {
           <DateNav
             selectedDate={selectedDate}
             entryCount={dayEntries.length}
-            onPrev={() => setSelectedDate(shiftDate(selectedDate, -1))}
-            onNext={() => setSelectedDate(shiftDate(selectedDate, 1))}
-            onToday={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
-            onSelectDate={(date) => setSelectedDate(date)}
           />
 
           {/* Search & Tag Filter Toolbar */}
@@ -791,7 +787,7 @@ export default function Home() {
                     <div>
                       <button
                         onClick={() => openComposer()}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary-hover transition-colors shadow-sm"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-card px-4 text-xs font-semibold text-primary hover:bg-muted transition-colors"
                       >
                         <Plus size={14} />
                         <span>Create First Entry (N)</span>
@@ -820,6 +816,7 @@ export default function Home() {
         <Sidebar
           entries={entries}
           selectedDate={selectedDate}
+          onSelectDate={(date) => setSelectedDate(date)}
           onPromptClick={(body) => openComposer(body)}
         />
       </div>
@@ -829,7 +826,7 @@ export default function Home() {
         id="btn-add-note-fab"
         onClick={() => openComposer()}
         aria-label="Add new note"
-        className="fixed bottom-6 right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-modal md:hidden hover:bg-primary-hover active:scale-95 transition-all"
+        className="fixed bottom-6 right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full border bg-card text-primary shadow-modal md:hidden hover:bg-muted active:scale-95 transition-all"
       >
         <Plus size={20} />
       </button>

@@ -64,18 +64,15 @@ async def _resolve_better_auth_user(token: str) -> dict | None:
 async def current_user(
     db: AsyncSession = Depends(get_session),
     authorization: str | None = Header(default=None),
-    x_user_id: str | None = Header(default=None),
 ) -> User:
     """
-    Resolve the calling user.
+    Resolve the calling user from a Better Auth session token.
 
-    Priority order:
-    1. Better Auth session token from `Authorization: Bearer <token>` header.
-       The token is verified by calling the Better Auth /get-session endpoint.
-    2. Local demo fallback via `X-User-Id` header (useful during development
-       before OAuth credentials are configured).
+    The token is sent as `Authorization: Bearer <token>` and verified by
+    calling the Better Auth /get-session endpoint that lives inside Next.js.
+    Unauthenticated requests are rejected with 401.
     """
-    # --- 1. Better Auth verification ---
+    # --- Better Auth verification ---
     token: str | None = None
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
@@ -104,18 +101,11 @@ async def current_user(
             await db.refresh(user)
             return user
 
-    # --- 2. Local demo fallback ---
-    demo_id = x_user_id or "local-demo-user"
-    result = await db.execute(select(User).where(User.id == demo_id))
-    user = result.scalar_one_or_none()
-    if user:
-        return user
-
-    user = User(id=demo_id, email="you@dailylogger.local", name="You")
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -3,13 +3,14 @@ databases:
     databaseName: daily_logger
     user: daily_logger
     plan: free          # upgrade to starter/standard for production
+    region: singapore
 
 services:
   - type: web
     name: daily-logger-api
     runtime: python
     plan: free          # upgrade for always-on (free tier spins down after inactivity)
-    region: oregon      # change to match your Vercel region if latency matters
+    region: singapore
 
     # Build step: install deps from the backend sub-directory
     rootDir: backend

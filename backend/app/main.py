@@ -116,20 +116,32 @@ async def rate_limit_middleware(request: Request, call_next):
     if request.url.path == "/health":
         return await call_next(request)
 
-    client_ip = request.client.host if request.client else "unknown"
+    # Honor X-Forwarded-For header when behind reverse proxies (Render / Cloudflare)
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown"
+
     now = time.time()
-    history = _rate_limit_records[client_ip]
+    history = _rate_limit_records.get(client_ip, [])
 
     # Prune records outside the sliding window
-    _rate_limit_records[client_ip] = [t for t in history if now - t < RATE_LIMIT_WINDOW_SEC]
+    active_records = [t for t in history if now - t < RATE_LIMIT_WINDOW_SEC]
 
-    if len(_rate_limit_records[client_ip]) >= RATE_LIMIT_MAX_REQUESTS:
+    if len(active_records) >= RATE_LIMIT_MAX_REQUESTS:
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={"detail": "Rate limit exceeded. Please try again later."},
         )
 
-    _rate_limit_records[client_ip].append(now)
+    active_records.append(now)
+    _rate_limit_records[client_ip] = active_records
+
+    # Prevent unbounded memory growth if many unique IPs hit the service
+    if len(_rate_limit_records) > 2000:
+        _rate_limit_records.clear()
+
     return await call_next(request)
 
 

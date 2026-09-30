@@ -17,7 +17,7 @@ services:
     buildCommand: pip install -r requirements.txt
 
     # Start the ASGI server. Render sets $PORT automatically.
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir .
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*' --app-dir .
 
     envVars:
       # Render injects postgresql:// — config.py's validator rewrites it to postgresql+asyncpg://

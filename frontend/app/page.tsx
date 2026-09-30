@@ -19,15 +19,15 @@ import {
   Terminal,
   Database,
   Layers,
+  LogOut,
 } from "lucide-react";
+import { useUser, useClerk, SignInButton } from "@clerk/nextjs";
 
 import { getEntries, deleteEntry as apiDelete } from "../lib/api";
-import { authClient, useSession } from "../lib/auth-client";
 import { useLoggerStore, type Entry } from "../lib/store";
 
 import { EntryCard } from "../components/EntryCard";
 import { Composer } from "../components/Composer";
-import { AuthModal } from "../components/AuthModal";
 import { Sidebar } from "../components/Sidebar";
 import { DateNav } from "../components/DateNav";
 
@@ -42,6 +42,18 @@ function shiftDate(iso: string, days: number): string {
 function SkeletonCard() {
   return <div className="h-32 rounded-xl border bg-muted/30 shimmer" aria-hidden="true" />;
 }
+
+function getInitials(name?: string | null, email?: string | null): string {
+  if (name) {
+    const parts = name.trim().split(" ");
+    return parts.length >= 2
+      ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+  }
+  if (email) return email.slice(0, 2).toUpperCase();
+  return "U";
+}
+
 
 /* ─── Landing Page Subcomponents (Zero Gradients) ─────────────── */
 
@@ -87,10 +99,9 @@ const METRIC_BADGES = [
 
 interface LandingProps {
   onEnterApp: () => void;
-  onSignIn: () => void;
 }
 
-function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
+function LandingPage({ onEnterApp }: LandingProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ── Top Nav ── */}
@@ -106,13 +117,6 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              id="landing-sign-in"
-              onClick={onSignIn}
-              className="h-9 rounded-lg px-3.5 text-xs font-medium text-foreground-muted hover:bg-muted hover:text-foreground transition-colors"
-            >
-              Sign In
-            </button>
             <button
               id="landing-start-writing"
               onClick={onEnterApp}
@@ -152,12 +156,6 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
           >
             Start Logging — It&apos;s Free
             <ArrowRight size={15} />
-          </button>
-          <button
-            onClick={onSignIn}
-            className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-lg border bg-card px-5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-          >
-            Sign In with Google
           </button>
         </div>
 
@@ -214,10 +212,10 @@ function LandingPage({ onEnterApp, onSignIn }: LandingProps) {
                   <span className="font-mono text-xs text-foreground-subtle">10:45 AM</span>
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">
-                  Optimized BetterAuth session caching with local cookie fallback
+                  Shipped instant local entry caching with background sync
                 </h3>
                 <p className="mt-1 text-xs text-foreground-muted leading-relaxed">
-                  Avoided a database query on every protected route by validating the HMAC token directly on the edge. Latency dropped from 140ms to 18ms.
+                  Writes apply to the local store immediately so notes feel instant, then sync to Postgres in the background. Latency dropped from 140ms to 18ms.
                 </p>
               </div>
 
@@ -403,18 +401,45 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
 
 /* ─── Main Application Page ───────────────────────────────────── */
 
+function SignInGate({ onBack }: { onBack: () => void }) {
+  return (
+    <main className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4 px-6 py-12">
+      <div className="rounded-2xl border bg-card p-10 shadow-modal flex flex-col items-center gap-4 text-center max-w-sm w-full">
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <ShieldCheck size={22} />
+        </span>
+        <h1 className="text-lg font-bold tracking-tight">Sign in to continue</h1>
+        <p className="text-xs text-foreground-muted leading-relaxed">
+          Your daily log is private. Sign in to open your personal workspace.
+        </p>
+        <SignInButton mode="redirect">
+          <button className="mt-1 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-foreground px-6 text-sm font-semibold text-background hover:opacity-90 transition-colors">
+            Log in
+          </button>
+        </SignInButton>
+        <button
+          onClick={onBack}
+          className="text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
+        >
+          ← Back to home
+        </button>
+      </div>
+    </main>
+  );
+}
+
 export default function Home() {
+  const { isLoaded: authLoaded, isSignedIn, user } = useUser();
+  const { signOut } = useClerk();
+
   const {
-    user, setUser,
     entries, setEntries, addEntry, updateEntry, removeEntry,
     selectedDate, setSelectedDate,
     isLoading, setLoading,
     error, setError,
   } = useLoggerStore();
 
-  const { data: session } = useSession();
   const [composerOpen, setComposerOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [composerInitialBody, setComposerInitialBody] = useState("");
   const [query, setQuery] = useState("");
@@ -433,22 +458,6 @@ export default function Home() {
     }
   }, [isDarkMode]);
 
-  /* ── Sync Better Auth session → Zustand user ── */
-  useEffect(() => {
-    if (session?.user) {
-      setUser({
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name ?? "User",
-        image: (session.user as any).image ?? null,
-      });
-      setShowApp(true);
-    } else {
-      setUser(null);
-      setShowApp(false);
-    }
-  }, [session, setUser]);
-
   /* ── Fetch entries ── */
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -461,8 +470,8 @@ export default function Home() {
   }, [setEntries, setLoading, setError]);
 
   useEffect(() => {
-    if (showApp && session?.user) fetchEntries();
-  }, [showApp, session?.user, fetchEntries]);
+    if (showApp) fetchEntries();
+  }, [showApp, fetchEntries]);
 
   /* ── Global Keyboard Shortcuts ── */
   useEffect(() => {
@@ -540,37 +549,29 @@ export default function Home() {
     }
   }
 
-  async function handleSignOut() {
-    await authClient.signOut();
-    setUser(null);
-    setShowApp(false);
-    setAuthOpen(false);
-  }
-
   function handleEnterApp() {
-    if (session?.user) {
-      setShowApp(true);
-    } else {
-      setAuthOpen(true);
-    }
+    setShowApp(true);
   }
 
   /* ── Landing Page View ── */
   if (!showApp) {
+    return <LandingPage onEnterApp={handleEnterApp} />;
+  }
+
+  /* ── Auth Gate ── */
+  if (!authLoaded) {
     return (
-      <>
-        <LandingPage
-          onEnterApp={handleEnterApp}
-          onSignIn={() => setAuthOpen(true)}
-        />
-        {authOpen && (
-          <AuthModal user={user} onClose={() => setAuthOpen(false)} onSignOut={handleSignOut} />
-        )}
-      </>
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-xs text-foreground-muted">Loading…</p>
+      </main>
     );
   }
 
-  /* ── SaaS App Interface ── */
+  if (!isSignedIn) {
+    return <SignInGate onBack={() => setShowApp(false)} />;
+  }
+
+  /* ── App Interface ── */
   return (
     <main className="min-h-screen bg-background text-foreground">
       {/* ═══ Header ═══════════════════════════════════════════════ */}
@@ -591,7 +592,7 @@ export default function Home() {
             <span className="text-foreground-subtle hidden sm:inline">/</span>
             <div className="hidden sm:flex items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-0.5 text-xs text-foreground-muted">
               <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              <span>{user ? user.name : "Personal Workspace"}</span>
+              <span>Personal Workspace</span>
             </div>
           </div>
 
@@ -617,6 +618,24 @@ export default function Home() {
               {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
+            {/* User profile & logout */}
+            <div className="flex items-center gap-1.5 rounded-full border bg-card py-1 pl-1 pr-1.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">
+                {getInitials(user.fullName, user.primaryEmailAddress?.emailAddress)}
+              </span>
+              <span className="hidden md:inline max-w-[140px] truncate text-xs text-foreground-muted">
+                {user.primaryEmailAddress?.emailAddress}
+              </span>
+              <button
+                onClick={() => signOut()}
+                title="Log out"
+                aria-label="Log out"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-foreground-muted hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+
             {/* New Note Button */}
             <button
               id="btn-add-note-header"
@@ -628,29 +647,6 @@ export default function Home() {
               <kbd className="ml-1 hidden md:inline-flex text-[10px] opacity-80 border-background/30 bg-background/20 text-background">
                 N
               </kbd>
-            </button>
-
-            {/* Profile Avatar / Auth */}
-            <button
-              onClick={() => setAuthOpen(true)}
-              aria-label={user ? `Profile for ${user.name}` : "Sign in"}
-              className="flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-            >
-              {user ? (
-                <>
-                  {user.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.image} alt={user.name} className="h-5 w-5 rounded-full object-cover" />
-                  ) : (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
-                      {user.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className="hidden md:inline">{user.name.split(" ")[0]}</span>
-                </>
-              ) : (
-                <span>Sign In</span>
-              )}
             </button>
           </div>
         </div>
@@ -850,14 +846,6 @@ export default function Home() {
             setComposerOpen(false);
             setComposerInitialBody("");
           }}
-        />
-      )}
-
-      {authOpen && (
-        <AuthModal
-          user={user}
-          onClose={() => setAuthOpen(false)}
-          onSignOut={handleSignOut}
         />
       )}
 

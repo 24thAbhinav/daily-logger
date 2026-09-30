@@ -25,13 +25,12 @@ services:
           name: daily-logger-db
           property: connectionString
 
-      # Frontend URL used for CORS and Better Auth session verification
+      # Frontend URL used for CORS
       - key: FRONTEND_URL
         value: https://frontend-alpha-ashen-54.vercel.app
-      - key: BETTER_AUTH_URL
-        value: https://frontend-alpha-ashen-54.vercel.app
-      # Set this to the exact same value as the Vercel BETTER_AUTH_SECRET.
-      - key: BETTER_AUTH_SECRET
-        sync: false
+
+      # Clerk – JWT verification for /api/* routes
+      - key: CLERK_JWKS_URL
+        value: https://frontend-alpha-ashen-54.vercel.app/__clerk/.well-known/jwks.json
 
     healthCheckPath: /health

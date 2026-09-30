@@ -1,29 +1,31 @@
 import type { Entry } from "./store";
-import { authClient } from "./auth-client";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 /**
- * Core fetch wrapper.
- * - Reads the current Better Auth session token via getSession() and forwards
- *   it as `Authorization: Bearer <token>` so the FastAPI backend can verify it.
- * - Requires an authenticated Better Auth session.
+ * Fetches the Auth0 access token from the Next.js session endpoint
+ * provided by @auth0/nextjs-auth0.
+ */
+async function getAccessToken(): Promise<string> {
+  const res = await fetch("/api/auth-token");
+  if (!res.ok) throw new Error("Not authenticated");
+  const data = await res.json();
+  if (!data.token) throw new Error("No access token in session");
+  return data.token;
+}
+
+/**
+ * Core fetch wrapper for the FastAPI backend.
+ * Automatically attaches the Auth0 Bearer token to every request.
  */
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  // Better Auth exposes the raw session token as session.token in getSession().
-  const { data: sessionData } = await authClient.getSession();
-  const token = sessionData?.session?.token as string | undefined;
+  const token = await getAccessToken();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
     ...(init?.headers as Record<string, string> | undefined),
   };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  } else {
-    throw new Error("Please sign in to access your entries.");
-  }
 
   const response = await fetch(`${BASE}${path}`, { ...init, headers });
 

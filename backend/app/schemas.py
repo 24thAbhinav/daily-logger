@@ -24,10 +24,3 @@ class EntryRead(EntryCreate):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-
-
-class UserRead(BaseModel):
-    id: str
-    email: str
-    name: str
-    image: Optional[str] = None

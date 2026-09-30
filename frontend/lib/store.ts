@@ -14,18 +14,7 @@ export type Entry = {
   updated_at?: string;
 };
 
-export type User = {
-  id: string;
-  email: string;
-  name: string;
-  image?: string | null;
-};
-
 type State = {
-  // Auth
-  user: User | null;
-  setUser: (user: User | null) => void;
-
   // Entries
   entries: Entry[];
   setEntries: (entries: Entry[]) => void;
@@ -47,10 +36,6 @@ type State = {
 // ---------------------------------------------------------------------------
 
 export const useLoggerStore = create<State>((set) => ({
-  // Auth
-  user: null,
-  setUser: (user) => set({ user }),
-
   // Entries
   entries: [],
   setEntries: (entries) => set({ entries, isLoading: false, error: null }),

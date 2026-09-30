@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
@@ -21,10 +22,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`dark ${geist.variable} ${mono.variable}`}>
-      <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`dark ${geist.variable} ${mono.variable}`}>
+        <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

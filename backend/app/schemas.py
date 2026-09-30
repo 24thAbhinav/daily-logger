@@ -22,5 +22,6 @@ class EntryRead(EntryCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    user_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

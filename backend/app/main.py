@@ -1,3 +1,4 @@
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import date
 import logging
@@ -8,8 +9,9 @@ import httpx
 import jwt
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Security, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import get_settings
@@ -19,6 +21,13 @@ from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 settings = get_settings()
 logger = logging.getLogger("daily_logger")
+
+# ---------------------------------------------------------------------------
+# Rate Limiting (In-memory sliding window: 120 req/min per IP)
+# ---------------------------------------------------------------------------
+_rate_limit_records: dict[str, list[float]] = defaultdict(list)
+RATE_LIMIT_WINDOW_SEC = 60.0
+RATE_LIMIT_MAX_REQUESTS = 120
 
 # ---------------------------------------------------------------------------
 # Clerk JWT verification
@@ -44,7 +53,7 @@ async def verify_token(
 ) -> dict:
     """
     FastAPI dependency that validates a Clerk session JWT (RS256).
-    Raises HTTP 401 on any verification failure.
+    Raises HTTP 401 on any verification failure without leaking crypto internals.
     """
     token = credentials.credentials
     try:
@@ -53,12 +62,24 @@ async def verify_token(
             token,
             signing_key.key,
             algorithms=["RS256"],
-            options={"verify_aud": False},  # Clerk doesn't use audience by default
+            options={"verify_aud": False, "verify_signature": True},
         )
+        user_id = payload.get("sub")
+        if not user_id or not isinstance(user_id, str):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: missing subject identity",
+            )
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
-    except jwt.InvalidTokenError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token has expired",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token",
+        )
     return payload
 
 
@@ -71,6 +92,8 @@ async def lifespan(_: FastAPI):
     logger.info("startup frontend_url=%s", settings.frontend_url)
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+        await connection.execute(text("ALTER TABLE entries ADD COLUMN IF NOT EXISTS user_id VARCHAR(128);"))
+        await connection.execute(text("CREATE INDEX IF NOT EXISTS ix_entries_user_id ON entries (user_id);"))
     logger.info("startup database_ready=true")
     yield
     await engine.dispose()
@@ -85,6 +108,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # Exclude internal health checks from rate limiting
+    if request.url.path == "/health":
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    history = _rate_limit_records[client_ip]
+
+    # Prune records outside the sliding window
+    _rate_limit_records[client_ip] = [t for t in history if now - t < RATE_LIMIT_WINDOW_SEC]
+
+    if len(_rate_limit_records[client_ip]) >= RATE_LIMIT_MAX_REQUESTS:
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": "Rate limit exceeded. Please try again later."},
+        )
+
+    _rate_limit_records[client_ip].append(now)
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -134,9 +180,14 @@ async def health() -> dict[str, str]:
 async def list_entries(
     entry_date: date | None = Query(default=None),
     db: AsyncSession = Depends(get_session),
-    _: dict = Depends(verify_token),
+    user: dict = Depends(verify_token),
 ) -> list[Entry]:
-    query = select(Entry).order_by(Entry.entry_date.desc(), Entry.created_at.desc())
+    user_id = user["sub"]
+    query = (
+        select(Entry)
+        .where(Entry.user_id == user_id)
+        .order_by(Entry.entry_date.desc(), Entry.created_at.desc())
+    )
     if entry_date:
         query = query.where(Entry.entry_date == entry_date)
     result = await db.execute(query)
@@ -147,9 +198,10 @@ async def list_entries(
 async def create_entry(
     payload: EntryCreate,
     db: AsyncSession = Depends(get_session),
-    _: dict = Depends(verify_token),
+    user: dict = Depends(verify_token),
 ) -> Entry:
-    entry = Entry(**payload.model_dump())
+    user_id = user["sub"]
+    entry = Entry(**payload.model_dump(), user_id=user_id)
     db.add(entry)
     await db.commit()
     await db.refresh(entry)
@@ -161,9 +213,12 @@ async def update_entry(
     entry_id: int,
     payload: EntryUpdate,
     db: AsyncSession = Depends(get_session),
-    _: dict = Depends(verify_token),
+    user: dict = Depends(verify_token),
 ) -> Entry:
-    result = await db.execute(select(Entry).where(Entry.id == entry_id))
+    user_id = user["sub"]
+    result = await db.execute(
+        select(Entry).where(Entry.id == entry_id, Entry.user_id == user_id)
+    )
     entry = result.scalar_one_or_none()
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
@@ -181,11 +236,15 @@ async def update_entry(
 async def delete_entry(
     entry_id: int,
     db: AsyncSession = Depends(get_session),
-    _: dict = Depends(verify_token),
+    user: dict = Depends(verify_token),
 ) -> None:
-    result = await db.execute(select(Entry).where(Entry.id == entry_id))
+    user_id = user["sub"]
+    result = await db.execute(
+        select(Entry).where(Entry.id == entry_id, Entry.user_id == user_id)
+    )
     entry = result.scalar_one_or_none()
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
     await db.delete(entry)
     await db.commit()
+

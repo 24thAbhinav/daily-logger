@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     # Clerk – used for JWT verification on every /api/* route
     # Get this from: Clerk Dashboard → API Keys → Advanced → JWKS URL
     clerk_jwks_url: str = ""
+    clerk_issuer: str = ""
+    clerk_authorized_parties: str = ""
+    clerk_audience: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -48,11 +48,64 @@ def _get_jwks_client() -> jwt.PyJWKClient:
     return _jwks_client
 
 
+def _extract_client_ip(request: Request) -> str:
+    """
+    Extract the real client IP address behind reverse proxies (Render, Cloudflare, etc.).
+    Falls back to request.client.host if proxy headers are missing.
+    """
+    cf_connecting_ip = request.headers.get("cf-connecting-ip")
+    if cf_connecting_ip:
+        return cf_connecting_ip.strip()
+
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "unknown"
+
+
+def _get_allowed_azp() -> set[str]:
+    """Return set of allowed authorized parties (frontends)."""
+    if settings.clerk_authorized_parties:
+        return {
+            p.strip().rstrip("/")
+            for p in settings.clerk_authorized_parties.split(",")
+            if p.strip()
+        }
+    return {
+        settings.frontend_url.rstrip("/"),
+        "http://localhost:3000",
+        "https://frontend-alpha-ashen-54.vercel.app",
+    }
+
+
+def _get_allowed_issuers() -> set[str]:
+    """Return set of allowed token issuers."""
+    if settings.clerk_issuer:
+        return {
+            i.strip().rstrip("/")
+            for i in settings.clerk_issuer.split(",")
+            if i.strip()
+        }
+    issuers: set[str] = set()
+    if settings.clerk_jwks_url and "/.well-known" in settings.clerk_jwks_url:
+        issuers.add(settings.clerk_jwks_url.split("/.well-known")[0].rstrip("/"))
+    return issuers
+
+
 async def verify_token(
     credentials: HTTPAuthorizationCredentials = Security(_bearer),
 ) -> dict:
     """
     FastAPI dependency that validates a Clerk session JWT (RS256).
+    Validates signature, subject (user_id), issuer (iss), authorized party (azp), and audience (aud).
     Raises HTTP 401 on any verification failure without leaking crypto internals.
     """
     token = credentials.credentials
@@ -64,12 +117,51 @@ async def verify_token(
             algorithms=["RS256"],
             options={"verify_aud": False, "verify_signature": True},
         )
+        # 1. Validate Subject (user_id)
         user_id = payload.get("sub")
         if not user_id or not isinstance(user_id, str):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token: missing subject identity",
             )
+
+        # 2. Validate Issuer (iss)
+        token_iss = payload.get("iss")
+        allowed_iss = _get_allowed_issuers()
+        if token_iss and allowed_iss:
+            normalized_iss = token_iss.rstrip("/")
+            if normalized_iss not in allowed_iss and not (
+                normalized_iss.endswith(".clerk.accounts.dev") or "/__clerk" in normalized_iss
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token: untrusted issuer",
+                )
+
+        # 3. Validate Authorized Party (azp)
+        token_azp = payload.get("azp")
+        if token_azp:
+            allowed_azp = _get_allowed_azp()
+            if token_azp.rstrip("/") not in allowed_azp:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token: untrusted authorized party",
+                )
+
+        # 4. Validate Audience (aud) if configured
+        if settings.clerk_audience:
+            token_aud = payload.get("aud")
+            if isinstance(token_aud, list):
+                if settings.clerk_audience not in token_aud:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid token: untrusted audience",
+                    )
+            elif token_aud != settings.clerk_audience:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token: untrusted audience",
+                )
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,18 +208,13 @@ async def rate_limit_middleware(request: Request, call_next):
     if request.url.path == "/health":
         return await call_next(request)
 
-    # Honor X-Forwarded-For header when behind reverse proxies (Render / Cloudflare)
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        client_ip = forwarded_for.split(",")[0].strip()
-    else:
-        client_ip = request.client.host if request.client else "unknown"
-
+    client_ip = _extract_client_ip(request)
     now = time.time()
-    history = _rate_limit_records.get(client_ip, [])
+    cutoff = now - RATE_LIMIT_WINDOW_SEC
 
+    history = _rate_limit_records.get(client_ip, [])
     # Prune records outside the sliding window
-    active_records = [t for t in history if now - t < RATE_LIMIT_WINDOW_SEC]
+    active_records = [t for t in history if t > cutoff]
 
     if len(active_records) >= RATE_LIMIT_MAX_REQUESTS:
         return JSONResponse(
@@ -138,9 +225,17 @@ async def rate_limit_middleware(request: Request, call_next):
     active_records.append(now)
     _rate_limit_records[client_ip] = active_records
 
-    # Prevent unbounded memory growth if many unique IPs hit the service
-    if len(_rate_limit_records) > 2000:
-        _rate_limit_records.clear()
+    # Clean up expired entries to prevent unbounded memory growth
+    if len(_rate_limit_records) > 1000:
+        stale_ips = [
+            ip for ip, timestamps in _rate_limit_records.items()
+            if not timestamps or timestamps[-1] <= cutoff
+        ]
+        for ip in stale_ips:
+            _rate_limit_records.pop(ip, None)
+
+        if len(_rate_limit_records) > 5000:
+            _rate_limit_records.clear()
 
     return await call_next(request)
 
